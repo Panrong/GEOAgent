@@ -31,17 +31,16 @@ if __name__ == "__main__":
     setup(
         name="geoagent",
         version=get_version(),
-        # description=(
-        #     "An efficient, flexible and full-featured toolkit for "
-        #     "fine-tuning large models"
-        # ),
-        # long_description=readme(),
-        # long_description_content_type="text/markdown",
-        # author="Panrong Tong",
+        description=(
+            "An efficient toolkit for GEO data analysis"
+        ),
+        long_description=readme(),
+        long_description_content_type="text/markdown",
+        author="Panrong Tong",
         packages=find_packages(),
-        # include_package_data=True,
-        # python_requires=">=3.10",
-        # install_requires=parse_requirements("requirements.txt"),
-        # zip_safe=False,
-        # entry_points={"console_scripts": ["geoagent = geoagent:cli"]},
+        include_package_data=True,
+        python_requires=">=3.10",
+        install_requires=parse_requirements("requirements.txt"),
+        zip_safe=False,
+        entry_points={"console_scripts": ["geoagent = geoagent:cli"]},
     )

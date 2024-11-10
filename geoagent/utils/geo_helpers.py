@@ -16,7 +16,11 @@ from scispacy.candidate_generation import CandidateGenerator
 from geoagent.types import FileType
 from geoagent.utils.logger import geoagent_logger as logger
 
-GEO_PATH = tempfile.gettempdir()
+# create GEO_PATH if not exist
+GEO_PATH = os.path.join(tempfile.gettempdir(), "geo")
+if not os.path.exists(GEO_PATH):
+    os.mkdir(GEO_PATH)
+
 GEO_BASE_URL = "https://www.ncbi.nlm.nih.gov"
 BASE_HEADER = {
     "authority": "www.ncbi.nlm.nih.gov",
@@ -180,9 +184,8 @@ def _get_gsm_supp_files(gsm_meta: dict) -> list:
     return [f for sublist in supp_files for f in sublist]
 
 
-def get_metadata(geo_id: str) -> dict:
-    _geo = GEOparse.get_GEO(geo=geo_id, destdir="./")
-    print(f"Getting metadata for {geo_id}, type: {_geo.geotype}")
+def get_metadata(geo_id: str, parse_subsamples: bool = False) -> dict:
+    _geo = GEOparse.get_GEO(geo=geo_id, destdir=GEO_PATH)
     _metadata = {
         "metadata": _geo.metadata,
         "supp_files":  [],
@@ -198,15 +201,27 @@ def get_metadata(geo_id: str) -> dict:
         sub_samples = _geo.metadata["sample_id"]
         if sub_samples:
             _metadata["sub_samples"] = len(sub_samples)
-            # _metadata["sub_metadata"] = {k: GEOparse.get_GEO(geo=k, destdir="./", silent=True ).metadata for k in sub_samples}
-            # _metadata["sub_supp_files"] = [_get_gsm_supp_files(x) for x in _metadata["sub_metadata"]]
+            if parse_subsamples:
+                _metadata["sub_metadata"] = {k: GEOparse.get_GEO(geo=k, destdir=GEO_PATH, silent=True ).metadata for k in sub_samples}
+                _metadata["sub_supp_files"] = [_get_gsm_supp_files(_metadata["sub_metadata"].get(x)) for x in _metadata["sub_metadata"]]
 
     else:
         raise ValueError(
             f"Unsupported GEO type: {_geo.geotype} for {geo_id}. Available types: GSM, GSE"
         )
 
-    return _metadata 
+    return _metadata
+
+def download_supp_files(geo_id: str, file_types: list[str]):
+    _geo = GEOparse.get_GEO(geo=geo_id, destdir=GEO_PATH)
+    _save_dir = os.path.join(GEO_PATH, geo_id)
+    if not os.path.exists(_save_dir):
+        os.makedirs(_save_dir)
+    
+    # download supp files of sub samples
+    _geo.download_supplementary_files(directory=_save_dir, download_sra=False)
+
+    # todo: download supp files of current geo if any
 
 
 def process_lines(file_handle):

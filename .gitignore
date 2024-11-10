@@ -12,7 +12,7 @@ logs/
 
 # GEO files
 *.gz
-*.txt
+GS*.txt
 
 # Python specific
 __pycache__/

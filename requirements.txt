@@ -1,0 +1,11 @@
+GEOparse
+pandas
+requests
+beautifulsoup4
+lxml
+tqdm
+pydantic
+h5py
+scipy
+scispacy
+streamlit

@@ -184,8 +184,8 @@ def _get_gsm_supp_files(gsm_meta: dict) -> list:
     return [f for sublist in supp_files for f in sublist]
 
 
-def get_metadata(geo_id: str, parse_subsamples: bool = False) -> dict:
-    _geo = GEOparse.get_GEO(geo=geo_id, destdir=GEO_PATH)
+def get_metadata(geo_id: str, parse_subsamples: bool = False, save_path: str=None) -> dict:
+    _geo = GEOparse.get_GEO(geo=geo_id, destdir=save_path if save_path else GEO_PATH)
     _metadata = {
         "metadata": _geo.metadata,
         "supp_files":  [],
@@ -212,9 +212,10 @@ def get_metadata(geo_id: str, parse_subsamples: bool = False) -> dict:
 
     return _metadata
 
-def download_supp_files(geo_id: str, file_types: list[str]):
-    _geo = GEOparse.get_GEO(geo=geo_id, destdir=GEO_PATH)
-    _save_dir = os.path.join(GEO_PATH, geo_id)
+def download_supp_files(geo_id: str, file_types: list[str], save_path: str = None):
+    _save_path = save_path if save_path else GEO_PATH
+    _geo = GEOparse.get_GEO(geo=geo_id, destdir=_save_path)
+    _save_dir = os.path.join(_save_path, geo_id)
     if not os.path.exists(_save_dir):
         os.makedirs(_save_dir)
     

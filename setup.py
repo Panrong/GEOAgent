@@ -42,5 +42,5 @@ if __name__ == "__main__":
         python_requires=">=3.10",
         install_requires=parse_requirements("requirements.txt"),
         zip_safe=False,
-        entry_points={"console_scripts": ["geoagent = geoagent:cli"]},
+        entry_points={"console_scripts": ["geoagent=geoagent.cli:cli"]},
     )

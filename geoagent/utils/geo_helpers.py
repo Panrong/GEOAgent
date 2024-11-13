@@ -5,6 +5,7 @@ import tarfile
 import tempfile
 from urllib.parse import quote
 
+import pandas as pd
 import GEOparse
 import h5py
 import requests
@@ -15,6 +16,7 @@ from scispacy.candidate_generation import CandidateGenerator
 
 from geoagent.types import FileType
 from geoagent.utils.logger import geoagent_logger as logger
+from geoagent.utils.download_helpers import download_from_ftp_url
 
 # create GEO_PATH if not exist
 GEO_PATH = os.path.join(tempfile.gettempdir(), "geo")
@@ -184,8 +186,8 @@ def _get_gsm_supp_files(gsm_meta: dict) -> list:
     return [f for sublist in supp_files for f in sublist]
 
 
-def get_metadata(geo_id: str, parse_subsamples: bool = False, save_path: str=None) -> dict:
-    _geo = GEOparse.get_GEO(geo=geo_id, destdir=save_path if save_path else GEO_PATH)
+def get_metadata(geo_id: str, parse_subsamples: bool = False, cache_dir: str=None) -> dict:
+    _geo = GEOparse.get_GEO(geo=geo_id, destdir=cache_dir if cache_dir else GEO_PATH)
     _metadata = {
         "metadata": _geo.metadata,
         "supp_files":  [],
@@ -202,7 +204,7 @@ def get_metadata(geo_id: str, parse_subsamples: bool = False, save_path: str=Non
         if sub_samples:
             _metadata["sub_samples"] = len(sub_samples)
             if parse_subsamples:
-                _metadata["sub_metadata"] = {k: GEOparse.get_GEO(geo=k, destdir=GEO_PATH, silent=True ).metadata for k in sub_samples}
+                _metadata["sub_metadata"] = {k: GEOparse.get_GEO(geo=k, destdir=GEO_PATH, silent=True).metadata for k in sub_samples}
                 _metadata["sub_supp_files"] = [_get_gsm_supp_files(_metadata["sub_metadata"].get(x)) for x in _metadata["sub_metadata"]]
 
     else:
@@ -212,17 +214,26 @@ def get_metadata(geo_id: str, parse_subsamples: bool = False, save_path: str=Non
 
     return _metadata
 
-def download_supp_files(geo_id: str, file_types: list[str], save_path: str = None):
-    _save_path = save_path if save_path else GEO_PATH
-    _geo = GEOparse.get_GEO(geo=geo_id, destdir=_save_path)
-    _save_dir = os.path.join(_save_path, geo_id)
-    if not os.path.exists(_save_dir):
-        os.makedirs(_save_dir)
-    
-    # download supp files of sub samples
-    _geo.download_supplementary_files(directory=_save_dir, download_sra=False)
+def download_supp_files(geo_id: str, file_types: list[str] = [], cache_path: str = None):
 
-    # todo: download supp files of current geo if any
+    cache_root_dir = os.path.join(cache_path if cache_path else GEO_PATH, geo_id)
+    soft_dir = os.path.join(cache_root_dir, "Soft")
+    supp_dir = os.path.join(cache_root_dir, "Supp")
+
+    try:
+         _geo = GEOparse.get_GEO(geo_id, destdir=soft_dir)
+    except OSError as e:
+        logger.error(f"Failed to download {geo_id} due to {e}")
+        return
+
+    # download supp files of sub samples
+    _geo.download_supplementary_files(directory=cache_root_dir, download_sra=False)
+
+    # download supp files of current geo if any
+    current_geo_supp_files = _geo.metadata.get("supplementary_file", [])
+    if current_geo_supp_files:
+        for file in current_geo_supp_files:
+            download_from_ftp_url(file, supp_dir)
 
 
 def process_lines(file_handle):

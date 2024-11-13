@@ -16,7 +16,7 @@ LOG_MAX_BYTES = "LOG_MAX_BYTES"
 LOG_BACKUP_COUNT = "LOG_BACKUP_COUNT"
 
 # constant
-LOG_NAME = "biagent"
+LOG_NAME = "geoagent"
 INFO_LOG_FILE_NAME = "info.log"
 ERROR_LOG_FILE_NAME = "error.log"
 

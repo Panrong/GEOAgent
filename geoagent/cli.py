@@ -1,119 +1,110 @@
 import argparse
 import json
 
+import os
 import pandas as pd
 
-from geoagent.utils import geo_helpers
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from geoagent.utils.geo_helpers import search_geo_records, get_metadata, download_supp_files
+
 
 
 def cli():
     parser = argparse.ArgumentParser(
         description="A CLI tool to run geoagent",
     )
-    parser.add_argument("--model", type=str, default="qwen1.5-72b-chat")
+
+    parser.add_argument("--llm", type=str, default="qwen1.5-72b-chat")
+    parser.add_argument("--parallel", type=int, default=1, help="The number of parallel tasks")
+
     subparsers = parser.add_subparsers(dest="subparser_name")
 
-    metadata_subparser = subparsers.add_parser(
-        "metadata", help="GEO Sample metadata extraction"
-    )
-    metadata_subparser.add_argument(
-        "--gsm_id", type=str, help="GSM ID", required=False, default=None
-    )
-    metadata_subparser.add_argument(
-        "--soft_file_list",
-        type=str,
-        required=False,
-        default=None,
-        help="The file contains a list of soft files to be processed",
-    )
-    metadata_subparser.add_argument(
-        "--max_gsms_per_gse",
-        type=int,
-        required=False,
-        default=2,
-        help="The maximum number of GSM to be processed per GSE",
-    )
-    metadata_subparser.add_argument(
-        "--parallel",
-        type=int,
-        required=False,
-        default=1,
-        help="The number of parallel tasks",
-    )
-    metadata_subparser.add_argument(
-        "--output",
-        type=str,
-        required=False,
-        help="The output file path",
-    )
-    metadata_subparser.add_argument(
-        "--cache_dir",
-        type=str,
-        required=False,
-        default=None,
-        help="The cache directory",
-    )
-    count_matrix_subparser = subparsers.add_parser(
-        "count_matrix", help="Read the count matrix from a chosen GEO sample"
-    )
-    count_matrix_subparser.add_argument(
-        "--gsm_id",
-        type=str,
-        help="a valid GEO sample ID",
-        required=True,
-    )
-    count_matrix_subparser.add_argument(
-        "--output",
-        type=str,
-        required=True,
-        help="The output h5ad file path",
-    )
-    geo_search_subparser = subparsers.add_parser(
-        "geo_search", help="Search GEO for samples"
-    )
+    search_subparser = subparsers.add_parser("search", help="Search GEO records")
+    search_subparser.add_argument("query", type=str, help="The keywords to search")
+    search_subparser.add_argument("--limit", type=int, help="The maximum number of results to return", default=10)
+    search_subparser.add_argument("--cache_dir", type=str, help="The directory to download the data", required=False, default=None)
+    search_subparser.add_argument("--output", type=str, help="The output file path", required=False, default=None)
+    
+    metadata_subparser = subparsers.add_parser("metadata", help="Extract metadata based on GEO ID")
+    metadata_subparser.add_argument("geoids", type=str, help="GEO IDs separated by comma or space")
+    metadata_subparser.add_argument("--parse_subsamples", type=bool, help="Whether to parse the subsamples", required=False, default=False)
+    metadata_subparser.add_argument("--cache_dir", type=str, help="The cache directory", required=False, default=None)
+    metadata_subparser.add_argument("--output", type=str, help="The output file path", required=False, default=None)
 
-    geo_search_subparser.add_argument("query", type=str, help="The query string")
 
-    pipeline_extractor_subparser = subparsers.add_parser(
-        "pipeline_extractor", help="Extract the pipeline from a given paper"
-    )
-    pipeline_extractor_subparser.add_argument(
-        "--parsed_paper",
-        type=str,
-        help="path to the paper in `md` format",
-        required=True,
-    )
-    pipeline_extractor_subparser.add_argument(
-        "--output",
-        type=str,
-        help="path to the output pipeline file, html or json",
-        required=True,
-    )
+    # count_matrix_subparser = subparsers.add_parser(
+    #     "count_matrix", help="Read the count matrix from a chosen GEO sample"
+    # )
+    # count_matrix_subparser.add_argument(
+    #     "--gsm_id",
+    #     type=str,
+    #     help="a valid GEO sample ID",
+    #     required=True,
+    # )
+    # count_matrix_subparser.add_argument(
+    #     "--output",
+    #     type=str,
+    #     required=True,
+    #     help="The output h5ad file path",
+    # )
+
+    # pipeline_extractor_subparser = subparsers.add_parser(
+    #     "pipeline_extractor", help="Extract the pipeline from a given paper"
+    # )
+    # pipeline_extractor_subparser.add_argument(
+    #     "--parsed_paper",
+    #     type=str,
+    #     help="path to the paper in `md` format",
+    #     required=True,
+    # )
+    # pipeline_extractor_subparser.add_argument(
+    #     "--output",
+    #     type=str,
+    #     help="path to the output pipeline file, html or json",
+    #     required=True,
+    # )
 
     args = parser.parse_args()
 
-    if args.subparser_name == "metadata":
-        if args.gsm_id:
-            metadatas = [metadata_task(args.gsm_id, args.model)]
-        elif args.soft_file_list:
-            assert args.output is not None, "Please provide output file path"
-            metadatas = metadata_task_soft_file_list(
-                args.soft_file_list,
-                args.max_gsms_per_gse,
-                args.model,
-                args.parallel,
-                cache_dir=args.cache_dir,
-            )
-        else:
-            raise ValueError("Please provide either gsm_id or soft_file_list")
+    if args.subparser_name == "search":
+        results = search_geo_records(args.query, max_records=args.limit)
+
+        if args.cache_dir:
+            if not os.path.exists(args.cache_dir):
+                os.makedirs(args.cache_dir)
+            search_df_path = os.path.join(args.cache_dir, f"search_results_{args.query.replace(' ', '%')}.csv")
+            pd.DataFrame(results).to_csv(search_df_path, encoding="utf-8")
+            geo_ids = [x["accession"] for x in results]
+            print(f"Downloading {geo_ids} to {args.cache_dir}")
+            for geo_id in geo_ids:
+                download_supp_files(geo_id, cache_path=args.cache_dir)
+
         if args.output:
-            df = pd.DataFrame(metadatas)
-            df.to_csv(args.output, index=False, encoding="utf-8")
+            pd.DataFrame(results).to_csv(args.output, encoding="utf-8")
         else:
-            print(metadatas)
-    elif args.subparser_name == "geo_search":
-        results = geo_helpers.search_geo_records(args.query)
-        print(json.dumps(results, indent=2))
+            print(json.dumps(results, indent=2))
+
+
+    elif args.subparser_name == "metadata":
+        # Split the input string into a list of GEO IDs
+        geo_ids = [_id.strip() for _id in args.geoids.replace(',', ' ').split()]
+
+        meta_infos = {}
+        with ThreadPoolExecutor(max_workers=args.parallel) as executor:
+            futures = {executor.submit(get_metadata, geo_id, args.parse_subsamples, args.cache_dir): geo_id for geo_id in geo_ids}
+            for future in as_completed(futures):
+                geo_id = futures[future]
+                try:
+                    meta_infos[geo_id] = future.result()
+                except Exception as e:
+                    print(f"Error processing {geo_id}: {e}")
+        
+        if args.output:
+            pd.DataFrame.from_dict(meta_infos, orient="index") \
+                .to_csv(args.output, encoding="utf-8")
+        else:
+            print(json.dumps(meta_infos, indent=2))
+        
     # elif args.subparser_name == "count_matrix":
     #     count_matrix_reader = GeoCountMatrixReader(llm=args.model)
     #     adata = count_matrix_reader.process_gsm(args.gsm_id)
@@ -124,3 +115,7 @@ def cli():
     #     pipeline_extractor.extract_pipeline(args.parsed_paper, args.output)
     else:
         raise NotImplementedError
+
+
+if __name__ == "__main__":
+    cli()

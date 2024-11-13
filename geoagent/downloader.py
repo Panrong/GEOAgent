@@ -8,7 +8,7 @@ def search(keywords: str, max_records: int):
 def parse_metadata(geo_ids: list[str], save_path: str):
     meta_infos = {}
     for geo_id in geo_ids:
-        meta_infos[geo_id] = get_metadata(geo_id, parse_subsamples=True, save_path=save_path)
+        meta_infos[geo_id] = get_metadata(geo_id, parse_subsamples=True, cache_dir=save_path)
     return pd.DataFrame.from_dict(meta_infos, orient="index")
 
 def download_data(geo_ids: list[str], file_types: list[str], save_path: str):

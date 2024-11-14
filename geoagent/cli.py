@@ -25,44 +25,8 @@ def cli():
     search_subparser.add_argument("--cache_dir", type=str, help="The directory to download the data", required=False, default=None)
     search_subparser.add_argument("--output", type=str, help="The output file path", required=False, default=None)
     
-    metadata_subparser = subparsers.add_parser("metadata", help="Extract metadata based on GEO ID")
-    metadata_subparser.add_argument("geoids", type=str, help="GEO IDs separated by comma or space")
-    metadata_subparser.add_argument("--parse_subsamples", type=bool, help="Whether to parse the subsamples", required=False, default=False)
-    metadata_subparser.add_argument("--cache_dir", type=str, help="The cache directory", required=False, default=None)
-    metadata_subparser.add_argument("--output", type=str, help="The output file path", required=False, default=None)
-
-
-    # count_matrix_subparser = subparsers.add_parser(
-    #     "count_matrix", help="Read the count matrix from a chosen GEO sample"
-    # )
-    # count_matrix_subparser.add_argument(
-    #     "--gsm_id",
-    #     type=str,
-    #     help="a valid GEO sample ID",
-    #     required=True,
-    # )
-    # count_matrix_subparser.add_argument(
-    #     "--output",
-    #     type=str,
-    #     required=True,
-    #     help="The output h5ad file path",
-    # )
-
-    # pipeline_extractor_subparser = subparsers.add_parser(
-    #     "pipeline_extractor", help="Extract the pipeline from a given paper"
-    # )
-    # pipeline_extractor_subparser.add_argument(
-    #     "--parsed_paper",
-    #     type=str,
-    #     help="path to the paper in `md` format",
-    #     required=True,
-    # )
-    # pipeline_extractor_subparser.add_argument(
-    #     "--output",
-    #     type=str,
-    #     help="path to the output pipeline file, html or json",
-    #     required=True,
-    # )
+    metadata_subparser = subparsers.add_parser("metadata", help="Extract metadata from downloaded data")
+    metadata_subparser.add_argument("--file", type=str, help="search result file path")
 
     args = parser.parse_args()
 
@@ -86,33 +50,22 @@ def cli():
 
 
     elif args.subparser_name == "metadata":
-        # Split the input string into a list of GEO IDs
-        geo_ids = [_id.strip() for _id in args.geoids.replace(',', ' ').split()]
+        search_file_path = args.file
+        root_dir = os.path.dirname(search_file_path)
+        output_path = search_file_path.replace("search_results", "metadata")
+
+        geo_ids = pd.read_csv(args.file)["accession"].tolist()
+        print(f"Extracting metadata for {geo_ids}")
 
         meta_infos = {}
-        with ThreadPoolExecutor(max_workers=args.parallel) as executor:
-            futures = {executor.submit(get_metadata, geo_id, args.parse_subsamples, args.cache_dir): geo_id for geo_id in geo_ids}
-            for future in as_completed(futures):
-                geo_id = futures[future]
-                try:
-                    meta_infos[geo_id] = future.result()
-                except Exception as e:
-                    print(f"Error processing {geo_id}: {e}")
+        for geo_id in geo_ids:
+            
+            _geo_soft_dir = os.path.join(root_dir, geo_id, "soft")
+            meta_infos[geo_id] = get_metadata(geo_id, parse_subsamples=True, cache_dir=_geo_soft_dir)
         
-        if args.output:
-            pd.DataFrame.from_dict(meta_infos, orient="index") \
-                .to_csv(args.output, encoding="utf-8")
-        else:
-            print(json.dumps(meta_infos, indent=2))
+        pd.DataFrame.from_dict(meta_infos, orient="index") \
+            .to_csv(output_path, encoding="utf-8")
         
-    # elif args.subparser_name == "count_matrix":
-    #     count_matrix_reader = GeoCountMatrixReader(llm=args.model)
-    #     adata = count_matrix_reader.process_gsm(args.gsm_id)
-    #     adata.write_h5ad(args.output)
-    # elif args.subparser_name == "pipeline_extractor":
-    #     pipeline_extractor = PipelineExtractor(llm=args.model)
-
-    #     pipeline_extractor.extract_pipeline(args.parsed_paper, args.output)
     else:
         raise NotImplementedError
 

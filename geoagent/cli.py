@@ -36,7 +36,7 @@ def cli():
         if args.cache_dir:
             if not os.path.exists(args.cache_dir):
                 os.makedirs(args.cache_dir)
-            search_df_path = os.path.join(args.cache_dir, f"search_results_{args.query.replace(' ', '%')}.csv")
+            search_df_path = os.path.join(args.cache_dir, f"search_results.csv")
             pd.DataFrame(results).to_csv(search_df_path, encoding="utf-8")
             geo_ids = [x["accession"] for x in results]
             print(f"Downloading {geo_ids} to {args.cache_dir}")
@@ -59,8 +59,7 @@ def cli():
 
         meta_infos = {}
         for geo_id in geo_ids:
-            
-            _geo_soft_dir = os.path.join(root_dir, geo_id, "soft")
+            _geo_soft_dir = os.path.join(root_dir, geo_id, "Soft")
             meta_infos[geo_id] = get_metadata(geo_id, parse_subsamples=True, cache_dir=_geo_soft_dir)
         
         pd.DataFrame.from_dict(meta_infos, orient="index") \

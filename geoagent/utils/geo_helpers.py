@@ -16,7 +16,7 @@ from scispacy.candidate_generation import CandidateGenerator
 
 from geoagent.types import FileType
 from geoagent.utils.logger import geoagent_logger as logger
-from geoagent.utils.download_helpers import download_from_ftp_url
+from geoagent.utils.file_helpers import download_from_ftp_url, list_files
 
 # create GEO_PATH if not exist
 GEO_PATH = os.path.join(tempfile.gettempdir(), "geo")
@@ -214,7 +214,7 @@ def get_metadata(geo_id: str, parse_subsamples: bool = False, cache_dir: str=Non
 
     return _metadata
 
-def download_supp_files(geo_id: str, file_types: list[str] = [], cache_path: str = None):
+def download_supp_files(geo_id: str, cache_path: str = None):
 
     cache_root_dir = os.path.join(cache_path if cache_path else GEO_PATH, geo_id)
     soft_dir = os.path.join(cache_root_dir, "Soft")
@@ -235,6 +235,28 @@ def download_supp_files(geo_id: str, file_types: list[str] = [], cache_path: str
         for file in current_geo_supp_files:
             download_from_ftp_url(file, supp_dir)
 
+
+def list_downloaded_files(cache_path: str, exclude_suffixes: list[str] = None) -> dict[str, list[str]]:
+    """
+    List downloaded files for each GEO record in cache path.
+    
+    Args:
+        cache_path (str): Path to the cache directory containing GEO record folders
+        
+    Returns:
+        dict[str, list[str]]: Dictionary mapping GEO IDs to their downloaded files
+    """
+    downloaded_files = {}
+    sub_dirs = [d for d in os.listdir(cache_path) if os.path.isdir(os.path.join(cache_path, d))]
+
+    for geo_id in sub_dirs:
+        geo_dir = os.path.join(cache_path, geo_id)
+        if os.path.isdir(geo_dir):
+            
+            downloaded_files[geo_id] = list_files(geo_dir, exclude_suffixes)
+            
+    return downloaded_files
+    
 
 def process_lines(file_handle):
     """

@@ -18,8 +18,7 @@ from geoagent.types import FileType
 from geoagent.utils.logger import geoagent_logger as logger
 from geoagent.utils.file_helpers import download_from_ftp_url, list_files
 
-# create GEO_PATH if not exist
-GEO_PATH = os.path.join(tempfile.gettempdir(), "geo")
+GEO_PATH = os.getenv("GEO_CACHE_DIR") or os.path.join(tempfile.gettempdir(), "geo")
 if not os.path.exists(GEO_PATH):
     os.mkdir(GEO_PATH)
 

@@ -186,14 +186,21 @@ def _get_gsm_supp_files(gsm_meta: dict) -> list:
 
 
 def get_metadata(geo_id: str, parse_subsamples: bool = False, cache_dir: str=None) -> dict:
-    _geo = GEOparse.get_GEO(geo=geo_id, destdir=cache_dir if cache_dir else GEO_PATH)
     _metadata = {
-        "metadata": _geo.metadata,
+        "metadata": "",
         "supp_files":  [],
         "sub_samples": 0,
         "sub_metadata": {},
         "sub_supp_files": {}
     }
+    dest_dir = cache_dir if cache_dir else GEO_PATH
+    try:
+        _geo = GEOparse.get_GEO(geo=geo_id, destdir=dest_dir)
+    except Exception as e:
+        logger.error(f"Failed to get metadata for {geo_id} due to {e}")
+        return _metadata
+    
+    _metadata["metadata"] = _geo.metadata
     if isinstance(_geo, GSM):
         _metadata["supp_files"] += _get_gsm_supp_files(_geo.metadata)
 
@@ -203,7 +210,7 @@ def get_metadata(geo_id: str, parse_subsamples: bool = False, cache_dir: str=Non
         if sub_samples:
             _metadata["sub_samples"] = len(sub_samples)
             if parse_subsamples:
-                _metadata["sub_metadata"] = {k: GEOparse.get_GEO(geo=k, destdir=GEO_PATH, silent=True).metadata for k in sub_samples}
+                _metadata["sub_metadata"] = {k: GEOparse.get_GEO(geo=k, destdir=dest_dir).metadata for k in sub_samples}
                 _metadata["sub_supp_files"] = [_get_gsm_supp_files(_metadata["sub_metadata"].get(x)) for x in _metadata["sub_metadata"]]
 
     else:

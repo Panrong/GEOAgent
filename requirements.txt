@@ -9,3 +9,4 @@ h5py
 scipy
 scispacy
 streamlit
+modelscope-agent

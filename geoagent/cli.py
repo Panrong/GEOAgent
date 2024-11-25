@@ -4,8 +4,8 @@ import json
 import os
 import pandas as pd
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from geoagent.utils.geo_helpers import search_geo_records, get_metadata, download_supp_files
+# from geoagent.tools import GeoCountMatrixReader
 
 
 
@@ -65,6 +65,12 @@ def cli():
         pd.DataFrame.from_dict(meta_infos, orient="index") \
             .to_csv(output_path, encoding="utf-8")
         
+
+    elif args.subparser_name == "count_matrix":
+        count_matrix_reader = GeoCountMatrixReader(llm=args.model)
+        adata = count_matrix_reader.process_gsm(args.gsm_id)
+        adata.write_h5ad(args.output)
+
     else:
         raise NotImplementedError
 

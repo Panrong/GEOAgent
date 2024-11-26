@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 from geoagent.utils.geo_helpers import search_geo_records, get_metadata, download_supp_files
+from geoagent.utils.metadata_helpers import SuppFileHelper
 # from geoagent.tools import GeoCountMatrixReader
 
 
@@ -25,11 +26,12 @@ def cli():
     search_subparser.add_argument("--cache_dir", type=str, help="The directory to download the data", required=False, default=None)
     search_subparser.add_argument("--output", type=str, help="The output file path", required=False, default=None)
     
-    metadata_subparser = subparsers.add_parser("metadata", help="Extract metadata from downloaded data")
-    metadata_subparser.add_argument("--file", type=str, help="search result file path")
+    metadata_subparser = subparsers.add_parser("metadata", help="Extract metadata from searched results")
+    metadata_subparser.add_argument("--cache_dir", type=str, help="search result file directory")
+    metadata_subparser.add_argument("--download_data", type=bool, help="if download all data", default=False)
+
 
     args = parser.parse_args()
-
     if args.subparser_name == "search":
         results = search_geo_records(args.query, max_records=args.limit)
 
@@ -50,11 +52,11 @@ def cli():
 
 
     elif args.subparser_name == "metadata":
-        search_file_path = args.file
-        root_dir = os.path.dirname(search_file_path)
-        output_path = search_file_path.replace("search_results", "metadata")
+        root_dir = args.cache_dir
+        search_file_path = os.path.join(root_dir, "search_results.csv")
+        output_path = os.path.join(root_dir, "metadata.csv")
 
-        geo_ids = pd.read_csv(args.file)["accession"].tolist()
+        geo_ids = pd.read_csv(search_file_path)["accession"].tolist()
         print(f"Extracting metadata for {geo_ids}")
 
         meta_infos = {}
@@ -65,7 +67,16 @@ def cli():
         pd.DataFrame.from_dict(meta_infos, orient="index") \
             .to_csv(output_path, encoding="utf-8")
         
+        sfh = SuppFileHelper(output_path)
+        with open(output_path.replace("metadata.csv", "supp_file_analysis.json"), "w") as f:
+            json.dump(sfh.analyze_gses(), f, indent=4)
 
+        print("x")
+        if args.download_data:
+            # to-do: download all files
+            pass
+
+    
     elif args.subparser_name == "count_matrix":
         count_matrix_reader = GeoCountMatrixReader(llm=args.model)
         adata = count_matrix_reader.process_gsm(args.gsm_id)

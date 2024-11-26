@@ -28,9 +28,11 @@ def cli():
     
     metadata_subparser = subparsers.add_parser("metadata", help="Extract metadata from searched results")
     metadata_subparser.add_argument("--cache_dir", type=str, help="search result file directory")
-    metadata_subparser.add_argument("--download_data", type=bool, help="if download all data", default=False)
-
-
+    
+    download_subparser = subparsers.add_parser("download", help="Download all files of a given GSE")
+    download_subparser.add_argument("gse_id", type=str, help="GSE ID")
+    download_subparser.add_argument("--cache_dir", type=str, help="The directory to download the data", default=None)
+    
     args = parser.parse_args()
     if args.subparser_name == "search":
         results = search_geo_records(args.query, max_records=args.limit)
@@ -54,7 +56,10 @@ def cli():
     elif args.subparser_name == "metadata":
         root_dir = args.cache_dir
         search_file_path = os.path.join(root_dir, "search_results.csv")
-        output_path = os.path.join(root_dir, "metadata.csv")
+        meta_path = os.path.join(root_dir, "metadata.csv")
+        supp_stats_path = os.path.join(root_dir, "supp_file_stats.json")
+        supp_tree_path = os.path.join(root_dir, "supp_file_tree.json")
+
 
         geo_ids = pd.read_csv(search_file_path)["accession"].tolist()
         print(f"Extracting metadata for {geo_ids}")
@@ -65,22 +70,24 @@ def cli():
             meta_infos[geo_id] = get_metadata(geo_id, parse_subsamples=True, cache_dir=_geo_soft_dir)
         
         pd.DataFrame.from_dict(meta_infos, orient="index") \
-            .to_csv(output_path, encoding="utf-8")
+            .to_csv(meta_path, encoding="utf-8")
         
-        sfh = SuppFileHelper(output_path)
-        with open(output_path.replace("metadata.csv", "supp_file_analysis.json"), "w") as f:
+        sfh = SuppFileHelper(meta_path)
+        with open(supp_stats_path, "w") as f:
             json.dump(sfh.analyze_gses(), f, indent=4)
+        with open(supp_tree_path, "w") as f:
+            json.dump(sfh.list_all_gse_files(), f, indent=4)
 
-        print("x")
-        if args.download_data:
-            # to-do: download all files
-            pass
+    elif args.subparser_name == "download":
+        print(f"Downloading {geo_ids} to {args.cache_dir}")
+        download_supp_files(geo_id, cache_path=args.cache_dir)   
 
     
     elif args.subparser_name == "count_matrix":
         count_matrix_reader = GeoCountMatrixReader(llm=args.model)
         adata = count_matrix_reader.process_gsm(args.gsm_id)
         adata.write_h5ad(args.output)
+
 
     else:
         raise NotImplementedError

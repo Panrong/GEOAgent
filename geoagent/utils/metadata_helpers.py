@@ -128,8 +128,8 @@ class SuppFileHelper:
     
     def list_all_gse_files(self) -> dict[str, dict]:
         return {gse.geo_id: {
-            "gse_level": gse.files, 
-            "gsm_level": {gsm.geo_id: gsm.files for gsm in gse.samples}
+            "gse_level": os.path.basename(gse.files), 
+            "gsm_level": {gsm.geo_id: os.path.basename(gsm.files) for gsm in gse.samples}
             } 
             for gse in self.gse_files
         }

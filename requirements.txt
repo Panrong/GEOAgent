@@ -10,3 +10,4 @@ scipy
 scispacy
 streamlit
 modelscope-agent
+scanpy[leiden]

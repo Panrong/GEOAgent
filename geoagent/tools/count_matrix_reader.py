@@ -4,12 +4,12 @@ from modelscope_agent.llm.base import BaseChatModel
 from modelscope_agent.tools.base import BaseTool, register_tool
 from scanpy import AnnData
 
-from biagent import prompts
-from biagent.types import FileType
-from biagent.utils import geo_helpers
-from biagent.utils.code_runner import safe_exec_func
-from biagent.utils.llm_helpers import get_chat_model
-from biagent.utils.output_parser import parse_python_markdown
+from geoagent import prompts
+from geoagent.types import FileType
+from geoagent.utils import geo_helpers
+from geoagent.utils.code_runner import safe_exec_func
+from geoagent.utils.llm_helpers import get_chat_model
+from geoagent.utils.output_parser import parse_python_markdown
 
 
 @register_tool("geo_count_matrix_reader")

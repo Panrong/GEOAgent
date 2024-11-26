@@ -6,7 +6,7 @@ import pandas as pd
 
 from geoagent.utils.geo_helpers import search_geo_records, get_metadata, download_supp_files
 from geoagent.utils.metadata_helpers import SuppFileHelper
-# from geoagent.tools import GeoCountMatrixReader
+from geoagent.tools import GeoCountMatrixReader   
 
 
 
@@ -33,6 +33,11 @@ def cli():
     download_subparser.add_argument("gse_id", type=str, help="GSE ID")
     download_subparser.add_argument("--cache_dir", type=str, help="The directory to download the data", default=None)
     
+    count_matrix_subparser = subparsers.add_parser("count_matrix", help="Read the count matrix from a chosen GEO sample")
+    count_matrix_subparser.add_argument("--gsm_id", type=str, help="a valid GEO sample ID", required=True)
+    count_matrix_subparser.add_argument("--output", type=str, required=True, help="The output h5ad file path")
+
+
     args = parser.parse_args()
     if args.subparser_name == "search":
         results = search_geo_records(args.query, max_records=args.limit)

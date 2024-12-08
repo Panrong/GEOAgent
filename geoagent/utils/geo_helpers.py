@@ -427,3 +427,41 @@ def check_file_type(file_content: dict) -> FileType:
         if ".h5ad." in f:
             file_type = FileType.H5AD
     return file_type
+
+
+if __name__ == "__main__":
+    gsm_id = "GSM8636828"
+    geo_pa = "/Users/panrong/Downloads/"
+
+    res = {"files": [], "dir": None, "content": []}
+    for f in os.listdir(geo_pa):
+        if os.path.isdir(os.path.join(geo_pa, f)) and (gsm_id in f):
+            res["files"] = os.listdir(os.path.join(geo_pa, f))
+            res["dir"] = os.path.join(geo_pa, f)
+            new_files = []
+            for gsm_file in res["files"]:
+                if ".tar" in gsm_file:
+                    file = tarfile.open(os.path.join(res["dir"], gsm_file))
+                    file.extractall(res["dir"])
+                    file.close()
+
+                    for cur_dir, _, cur_files in os.walk(res["dir"]):
+                        if len(cur_files) > 0:
+                            for cur_file in cur_files:
+                                if cur_file == gsm_file:
+                                    continue
+                                shutil.move(
+                                    os.path.join(cur_dir, cur_file),
+                                    os.path.join(res["dir"], cur_file),
+                                )
+                                new_files.append(cur_file)
+                    new_files = list(set(new_files))  # remove duplicates
+                elif os.path.isfile(os.path.join(res["dir"], gsm_file)):
+                    new_files.append(gsm_file)
+
+            res["files"] = [x for x in new_files if not x.startswith(".") and not x.endswith("RData.gz")]
+            print(res)
+            for gsm_file in res["files"]:
+                res["content"].append(_peek_file_content(gsm_file, res["dir"]))
+            break
+    print(res)

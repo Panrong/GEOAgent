@@ -6,7 +6,7 @@ import modelscope_agent.llm
 from modelscope_agent.llm.base import BaseChatModel
 from modelscope_agent.utils.tokenization_utils import count_tokens
 
-from geoagent.utils.logger import biagent_logger as logger
+from geoagent.utils.logger import geoagent_logger as logger
 from geoagent.utils.output_parser import parse_json_markdown
 
 

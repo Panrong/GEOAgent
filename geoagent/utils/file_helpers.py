@@ -1,8 +1,12 @@
+import pandas as pd
 import os
-from urllib.request import urlretrieve
+import gzip
+import itertools
 import subprocess
 import time
+from urllib.request import urlretrieve
 from datetime import datetime
+
 
 def download_from_ftp_url(ftp_url, local_dir):
     try:
@@ -109,9 +113,41 @@ def wget_ftp_url(ftp_url: str, data_dir: str, log_dir: str, read_timeout: int = 
                     f.write(f"[{datetime.now()}] Attempt {attempt + 1} failed, retrying...\n")
                 time.sleep(2)  # Wait before retry
 
+def head_file(file_path: str, n: int) -> str:
+    """Get the first n rows of a file efficiently.
+    
+    Args:
+        file_path: Path to the file to read
+        n: Number of rows to read
+        
+    Returns:
+        String containing the first n rows of the file
+    """
+    # Handle Excel files
+    if file_path.endswith(('.xls', '.xlsx')):
+        df = pd.read_excel(file_path, nrows=n)
+        return df.to_string()
+        
+    # Handle gzipped files
+    opener = gzip.open if file_path.endswith('.gz') else open
+    
+    with opener(file_path, 'rt') as f:
+        # Use itertools.islice for memory efficient reading of first n lines
+        return ''.join(itertools.islice(f, n))
+    
+
+def list_files_with_content(file_dir: str, peek_types: list[str], peek_limits: int = 10) -> dict:
+    res = {"file_dir": file_dir, "files": [], "content": []}
+    for file_name in os.listdir(file_dir):
+        file_path = os.path.join(file_dir, file_name)
+        if os.path.isfile(file_path):
+            res["files"].append(file_name)
+            if any(ext in file_name.lower() for ext in peek_types):
+                res["content"].append(head_file(file_path, peek_limits))
+            else:
+                res["content"].append(None)
+    return res
+
 
 if __name__ == "__main__":
-    wget_ftp_url(ftp_url='ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM8642nnn/GSM8642547/suppl/GSM8642547_Day8_LPKO_barcodes.tsv.gz',
-                 data_dir='/Users/panrong/Downloads/download_test',
-                 read_timeout=10,
-                 max_retries=3)
+    print(list_files_with_content("/Users/panrong/Downloads/GSM8636828", peek_types=["csv", "tsv", "mtx"]))

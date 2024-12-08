@@ -6,7 +6,7 @@ import pandas as pd
 
 from geoagent.utils.geo_helpers import search_geo_records, get_metadata, download_supp_files
 from geoagent.utils.metadata_helpers import SuppFileHelper
-from geoagent.tools import GeoCountMatrixReader   
+from geoagent.tools.count_matrix_reader import GeoCountMatrixReader   
 
 
 
@@ -33,9 +33,9 @@ def cli():
     download_subparser.add_argument("gse_id", type=str, help="GSE ID")
     download_subparser.add_argument("--cache_dir", type=str, help="The directory to download the data", default=None)
     
-    count_matrix_subparser = subparsers.add_parser("count_matrix", help="Read the count matrix from a chosen GEO sample")
-    count_matrix_subparser.add_argument("--gsm_id", type=str, help="a valid GEO sample ID", required=True)
-    count_matrix_subparser.add_argument("--output", type=str, required=True, help="The output h5ad file path")
+    counts_subparser = subparsers.add_parser("counts", help="Read the count matrix from a chosen GEO sample")
+    counts_subparser.add_argument("--gsm_id", type=str, help="a valid GEO sample ID", required=True)
+    # count_matrix_subparser.add_argument("--output", type=str, required=True, help="The output h5ad file path")
 
 
     args = parser.parse_args()
@@ -85,11 +85,11 @@ def cli():
 
     elif args.subparser_name == "download":
         print(f"Downloading {geo_ids} to {args.cache_dir}")
-        download_supp_files(geo_id, cache_path=args.cache_dir)   
+        download_supp_files(geo_id, cache_path=args.cache_dir)
 
     
-    elif args.subparser_name == "count_matrix":
-        count_matrix_reader = GeoCountMatrixReader(llm=args.model)
+    elif args.subparser_name == "counts":
+        count_matrix_reader = GeoCountMatrixReader(llm="")
         adata = count_matrix_reader.process_gsm(args.gsm_id)
         adata.write_h5ad(args.output)
 
